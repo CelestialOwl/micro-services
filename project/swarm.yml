@@ -1,0 +1,107 @@
+version: '3'
+services:
+
+  caddy:
+    image: celestialowl/micro-caddy:1.0.2
+    deploy:
+      mode: replicated
+      replicas: 1
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+  front-end:
+    image: celestialowl/front-end:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+  broker-service:
+    image: celestialowl/broker-service:1.0.2
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  listener-service:
+    image: celestialowl/listener-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    
+  authentication-service:
+    image: celestialowl/authentication-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "postgres://postgres:password@host.docker.internal:5433/users?sslmode=disable"
+  
+  logger-service:
+    image: celestialowl/logger-service:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+  
+  mail-service:
+    image: celestialowl/mail-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      MAIL_DOMAIN: localhost
+      MAIL_HOST: mailhog
+      MAIL_USERNAME: ""
+      MAIL_PORT: 1025
+      MAIL_PASSWORD: ""
+      MAIL_ENCRYPTION: none
+      FROM_NAME: "Hassan"
+      FROM_ADDRESS: "hassan.akhtar@test.com"
+  
+  rabbitmq:
+    image: 'rabbitmq:alpine'
+    deploy:
+      mode: global 
+  
+  mail-hog:
+    image: 'mailhog/mailhog:latest'
+    ports:
+      - "8025:8025"
+    deploy:
+      mode: global
+
+  mongo:
+    image: 'mongo:4.2.17-bionic'
+    ports:
+      - "27017:27017"
+    deploy:
+      mode: global
+    environment:
+      MONGO_INITDB_DATABASE: logs
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - './db-data/mongo/:/data/db'
+  
+  postgres:
+    image: 'postgres:14.17'
+    ports:
+      - "5433:5432"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+      - ./custom-postgresql.conf:/etc/postgresql/postgresql.conf
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
